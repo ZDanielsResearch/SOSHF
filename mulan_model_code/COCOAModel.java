@@ -1,0 +1,53 @@
+
+import java.io.FileReader;
+import java.io.PrintWriter;
+import mulan.classifier.MultiLabelOutput;
+import mulan.classifier.meta.RAkEL;
+import mulan.classifier.transformation.LabelPowerset;
+import mulan.data.MultiLabelInstances;
+import mulan.classifier.transformation.CalibratedLabelRanking;
+import weka.classifiers.trees.J48;
+import mulan.classifier.imbalance.COCOA;
+import weka.core.Instance;
+import weka.core.Instances;
+import weka.core.Utils;
+
+public class COCOAModel {
+
+    public static void main(String[] args) throws Exception {
+        String arffFilename = Utils.getOption("arff", args);
+        String xmlFilename = Utils.getOption("xml", args);
+	String outputFilename = Utils.getOption("output", args);
+
+        MultiLabelInstances dataset = new MultiLabelInstances(arffFilename, xmlFilename);
+
+	COCOA model = new COCOA(new J48());
+	model.setUseBinaryBalanceLearner(true);
+
+        model.build(dataset);
+
+
+        String unlabeledFilename = Utils.getOption("unlabeled", args);
+        FileReader reader = new FileReader(unlabeledFilename);
+        Instances unlabeledData = new Instances(reader);
+
+        int numInstances = unlabeledData.numInstances();
+
+	PrintWriter writer = new PrintWriter(outputFilename, "UTF-8");
+
+        for (int instanceIndex = 0; instanceIndex < numInstances; instanceIndex++) {
+            Instance instance = unlabeledData.instance(instanceIndex);
+            MultiLabelOutput output = model.makePrediction(instance);
+            // do necessary operations with provided prediction output, here just print it out
+	    boolean[] predictions = output.getBipartition();
+	    for (int i = 0; i < predictions.length; i++){
+		int prediction = predictions[i] ? 1 : 0;
+            	writer.print(prediction);
+		writer.print(" ");
+	    }
+	    writer.println("");
+        }
+
+	writer.close();
+    }
+}
